@@ -8,7 +8,7 @@ package com.mycompany.chatapp.part1;
 public class Login {
 
     public boolean checkUserName(String username) {
-        return username.contains("_") && username.length() <= 5;
+        return username != null && username.contains("_") && username.length() <= 5;
     }
 
     public boolean checkPasswordComplexity(String password) {
@@ -32,7 +32,7 @@ public class Login {
         if (!checkCellPhoneNumber(cellNumber)) {
             return "Please enter a valid phone number (e.g., 0821234567 or +27821234567).";
         }
-        return "The two addresses have been successfully added.";
+        return "The user has been registered successfully.";
     }
 
     public boolean loginUser(String username, String password, String enteredUser, String enteredPass) {
