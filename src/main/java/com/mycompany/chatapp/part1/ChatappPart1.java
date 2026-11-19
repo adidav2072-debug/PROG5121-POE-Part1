@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- */
-
 package com.mycompany.chatapp.part1;
 
 import java.util.Scanner;
@@ -11,12 +7,18 @@ public class ChatappPart1 {
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
         Login loginObj = new Login();
+        MessageStore store = new MessageStore();
+        store.loadStoredMessagesFromJson();
 
         System.out.print("Enter First Name: ");
         String firstName = input.nextLine();
 
         System.out.print("Enter Last Name: ");
         String lastName = input.nextLine();
+
+        String senderName = (firstName != null && !firstName.trim().isEmpty())
+                ? firstName.trim()
+                : "Adi";
 
         String username = "";
         while (true) {
@@ -71,7 +73,6 @@ public class ChatappPart1 {
 
         System.out.println("\n" + loginStatus);
 
-       
         if (isLoggedIn) {
             System.out.println("\nWelcome to QuickChat.");
 
@@ -83,23 +84,30 @@ public class ChatappPart1 {
                 System.out.println("1) Send Messages");
                 System.out.println("2) Show recently sent messages");
                 System.out.println("3) Quit");
+                System.out.println("4) Stored Messages");
                 System.out.print("Enter option: ");
 
-                int option = Integer.parseInt(input.nextLine());
+                int option;
+                try {
+                    option = Integer.parseInt(input.nextLine().trim());
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid option. Please choose 1, 2, 3, or 4.");
+                    continue;
+                }
 
                 if (option == 1) {
                     System.out.print("How many messages would you like to enter? ");
-                    int numMessages = Integer.parseInt(input.nextLine());
+                    int numMessages = Integer.parseInt(input.nextLine().trim());
 
                     for (int i = 1; i <= numMessages; i++) {
                         System.out.println("\n--- Message " + i + " ---");
 
                         String cell = "";
-                        Message msg = new Message();
+                        Message validator = new Message();
                         while (true) {
                             System.out.print("Enter Recipient Cell Number: ");
                             cell = input.nextLine();
-                            String cellStatus = msg.checkRecipientCell(cell);
+                            String cellStatus = validator.checkRecipientCell(cell);
                             System.out.println(cellStatus);
                             if (cellStatus.equals("Cell phone number successfully captured.")) {
                                 break;
@@ -110,14 +118,14 @@ public class ChatappPart1 {
                         while (true) {
                             System.out.print("Enter Message (max 250 chars): ");
                             text = input.nextLine();
-                            String lenStatus = msg.checkMessageLength(text);
+                            String lenStatus = validator.checkMessageLength(text);
                             System.out.println(lenStatus);
                             if (lenStatus.equals("Message ready to send.")) {
                                 break;
                             }
                         }
 
-                        Message currentMsg = new Message(i, cell, text);
+                        Message currentMsg = new Message(i, senderName, cell, text, "PENDING");
                         System.out.println("Message ID generated: " + currentMsg.getMessageID());
                         System.out.println("Message Hash: " + currentMsg.getMessageHash());
 
@@ -126,10 +134,11 @@ public class ChatappPart1 {
                         System.out.println("2) Disregard Message");
                         System.out.println("3) Store Message to send later");
                         System.out.print("Choice: ");
-                        int action = Integer.parseInt(input.nextLine());
+                        int action = Integer.parseInt(input.nextLine().trim());
 
                         String actionResult = currentMsg.SentMessage(action);
                         System.out.println(actionResult);
+                        store.recordMessage(currentMsg, action);
 
                         if (action == 1) {
                             totalSent++;
@@ -142,16 +151,77 @@ public class ChatappPart1 {
                     System.out.println("\nTotal messages sent so far: " + totalSent);
 
                 } else if (option == 2) {
-                    System.out.println("Coming Soon.");
+                    Message[] sentArr = store.getSentMessagesArray();
+                    if (sentArr.length == 0) {
+                        System.out.println("No recently sent messages.");
+                    } else {
+                        for (Message m : sentArr) {
+                            System.out.println("\n" + m.printMessages());
+                        }
+                    }
+
                 } else if (option == 3) {
                     running = false;
                     System.out.println("Goodbye!");
+
+                } else if (option == 4) {
+                    handleStoredMessagesMenu(input, store);
+
                 } else {
-                    System.out.println("Invalid option. Please choose 1, 2, or 3.");
+                    System.out.println("Invalid option. Please choose 1, 2, 3, or 4.");
                 }
             }
         }
 
         input.close();
+    }
+
+    private static void handleStoredMessagesMenu(Scanner input, MessageStore store) {
+        boolean inStoredMenu = true;
+        while (inStoredMenu) {
+            System.out.println("\n--- Stored Messages Menu ---");
+            System.out.println("a) Display sender and recipient of all stored messages");
+            System.out.println("b) Display the longest stored message");
+            System.out.println("c) Search for a message ID");
+            System.out.println("d) Search for all messages for a recipient");
+            System.out.println("e) Delete a message using the message hash");
+            System.out.println("f) Display report of all stored messages");
+            System.out.println("g) Back to main menu");
+            System.out.print("Choose an option (a-g): ");
+
+            String choice = input.nextLine().trim().toLowerCase();
+            switch (choice) {
+                case "a":
+                    System.out.println("\n" + store.displaySendersAndRecipients());
+                    break;
+                case "b":
+                    System.out.println("\nLongest Message: " + store.displayLongestMessage());
+                    break;
+                case "c":
+                    System.out.print("Enter Message ID: ");
+                    String id = input.nextLine();
+                    System.out.println("\n" + store.searchByMessageID(id));
+                    break;
+                case "d":
+                    System.out.print("Enter Recipient Cell Number: ");
+                    String recipient = input.nextLine();
+                    System.out.println("\n" + store.searchByRecipient(recipient));
+                    break;
+                case "e":
+                    System.out.print("Enter Message Hash to delete: ");
+                    String hash = input.nextLine();
+                    System.out.println("\n" + store.deleteMessageByHash(hash));
+                    break;
+                case "f":
+                    System.out.println("\n--- Stored Messages Report ---");
+                    System.out.println(store.displayFullReport());
+                    break;
+                case "g":
+                    inStoredMenu = false;
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please enter a through g.");
+            }
+        }
     }
 }
